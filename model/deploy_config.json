@@ -1,0 +1,14 @@
+{
+ "experiment": "V3_full",
+ "checkpoint": "V3_full_s44_best.pt",
+ "img_size": 256,
+ "temperature": 1.259194134200016,
+ "threshold": 0.17555833710788551,
+ "abstain_threshold": 0.6931583152688364,
+ "seg_threshold": 0.5,
+ "min_area": 98,
+ "run_mode": "full_experiment",
+ "pretrained_loaded": true,
+ "seed": 44,
+ "tta": true
+}

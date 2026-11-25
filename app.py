@@ -1,111 +1,94 @@
-# app.py - BreastVision-XAI V3: ứng dụng Streamlit phân tích ảnh siêu âm vú (công cụ hỗ trợ nghiên cứu)
-import os, json
-import numpy as np
-import cv2
-import torch
-import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
-import bus_core as core
-import bus_core_v2 as C2
+"""BreastVision-XAI V3 — Trang chủ: health check, tổng quan, Presentation Mode."""
+import sys
+from pathlib import Path
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-RES = os.path.join(HERE, 'results')
-st.set_page_config(page_title='BreastVision-XAI V3', layout='wide')
-page = st.sidebar.radio('Trang', ['Phân tích ảnh', 'Kết quả nghiên cứu', 'Hướng dẫn và giới hạn'])
-st.sidebar.warning('Công cụ hỗ trợ NGHIÊN CỨU. Không phải thiết bị chẩn đoán y tế. Không nhập ảnh có thông tin định danh bệnh nhân.')
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import streamlit as st  # noqa: E402
 
-def load_cfg():
-    p = os.path.join(HERE, 'deploy_config.json')
-    return json.load(open(p, encoding='utf-8')) if os.path.exists(p) else None
+from src import config, ui, research_results as RR  # noqa: E402
+from src.security import UserFacingError  # noqa: E402
+
+ui.setup_page('Trang chủ')
+rt = ui.get_runtime()
+ui.sidebar(rt)
+ui.header()
+
+PIPELINE = ['Ảnh siêu âm', 'Tiền xử lý', 'Encoder EfficientNet-B3 dùng chung', 'Phân vùng (mask dự đoán)', 'Vùng lesion / quanh tổn thương / hậu âm (từ mask dự đoán)',
+            'Gộp đặc trưng theo evidence', 'Logit', 'Hiệu chuẩn nhiệt độ', 'Ngưỡng quyết định đã khóa', 'Từ chối (tùy chọn)']
 
 
-@st.cache_resource
-def get_model(ckpt):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    m, meta = C2.load_model_from_checkpoint(ckpt, device)
-    return m, device
+def flow():
+    html = '<div class="bv-flow">' + '<span class="bv-arrow">→</span>'.join(f'<span class="bv-box">{p}</span>' for p in PIPELINE) + '</div>'
+    st.markdown(html, unsafe_allow_html=True)
 
 
-if page == 'Phân tích ảnh':
-    st.title('BreastVision-XAI V3: phân tích ảnh siêu âm vú')
-    cfg = load_cfg()
-    if cfg is None:
-        st.error('Không tìm thấy deploy_config.json. Hãy chạy notebook BreastVision_XAI_V3.ipynb (mục 27) và đặt các file xuất ra cạnh app.py.'); st.stop()
-    if cfg.get('run_mode') != 'full_experiment':
-        st.error('MÔ HÌNH NÀY TỪ CHẾ ĐỘ SMOKE TEST (dữ liệu tổng hợp). Kết quả KHÔNG có ý nghĩa khoa học hay y khoa.')
-    if not cfg.get('pretrained_loaded', False):
-        st.warning('Backbone không dùng trọng số pretrained ImageNet trong lần huấn luyện này.')
-    ck = os.path.join(HERE, cfg['checkpoint'])
-    if not os.path.exists(ck):
-        st.error('Không tìm thấy checkpoint: ' + ck); st.stop()
-    model, device = get_model(ck)
-    st.sidebar.caption(f"Mô hình: {cfg['experiment']} | img_size {cfg['img_size']} | T={cfg['temperature']:.2f} | thiết bị: {device}")
-    up = st.file_uploader('Tải ảnh siêu âm (png/jpg/bmp). Ảnh chỉ được xử lý trong bộ nhớ, không lưu.', type=['png', 'jpg', 'jpeg', 'bmp'])
-    if up is None:
-        st.info('Hãy tải lên một ảnh siêu âm.')
-    else:
-        bgr = cv2.imdecode(np.frombuffer(up.read(), np.uint8), cv2.IMREAD_COLOR)
-        if bgr is None:
-            st.error('Không đọc được ảnh.'); st.stop()
-        rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-        with st.spinner('Đang phân tích...'):
-            r = C2.analyze_image_v2(rgb, model, cfg, device)
-        if r['abstain']:
-            st.warning('HỆ THỐNG TỪ CHỐI DỰ ĐOÁN: độ tin cậy sau hiệu chuẩn thấp hơn ngưỡng đã chọn trên tập validation. Cần chuyên gia xem xét.')
+def kpi_cards():
+    try:
+        ks = RR.kpis('V3_full')
+    except UserFacingError as e:
+        ui.show_error(e)
+        return
+    for col, k in zip(st.columns(len(ks)), ks):
+        col.markdown(f'<div class="bv-kpi"><div class="l">{k["label"]}</div><div class="v">{k["value"]}</div>'
+                     f'<div class="s">{k["model"]} · {k["dataset"]}<br>{k["note"]}<br>nguồn: {k["source"]}</div></div>', unsafe_allow_html=True)
+    st.caption('KPI lấy trực tiếp từ artifact; không chọn số đẹp. Checkpoint đang chạy trong demo là một seed (xem sidebar); KPI nội bộ là mean ± sd qua các seed trong file.')
+
+
+def x6_vs_v3():
+    try:
+        comp = RR.model_comparison(('X6', 'V3_full'))
+        paired = RR.paired_table('V3_full', 'X6')
+    except UserFacingError as e:
+        ui.show_error(e)
+        return
+    cols = ['model', 'n_seeds', 'auroc_mean', 'auroc_sd', 'sensitivity_malignant_mean', 'specificity_mean', 'dice_mean', 'dice_sd']
+    st.dataframe(comp[cols], hide_index=True, **ui.STRETCH)
+    st.dataframe(paired[['metric', 'diff', 'ci_low', 'ci_high', 'kết luận (tính từ CI)']], hide_index=True, **ui.STRETCH)
+    st.caption('X6 chỉ là kết quả thực nghiệm lưu trữ (không có checkpoint X6 trong bản triển khai này).')
+
+
+if st.session_state.get('presentation', False):
+    st.subheader('Presentation Mode')
+    kpi_cards()
+    t1, t2, t3, t4 = st.tabs(['Pipeline', 'Ví dụ', 'X6 so với V3_full', 'Giới hạn'])
+    with t1:
+        flow()
+        st.caption('Segmentation, evidence map và Grad-CAM là ba đầu ra/biểu diễn khác nhau.')
+    with t2:
+        res = st.session_state.get('current_result')
+        if res is None:
+            st.info('Chưa có ca nào được phân tích. Vào trang Analyze để tải ảnh của bạn (hoặc ca mẫu nếu có).')
         else:
-            st.info('Không bị từ chối. Điều này KHÔNG có nghĩa dự đoán là đúng.')
-        c1, c2 = st.columns(2)
-        with c1:
-            st.subheader('Dự đoán của mô hình')
-            st.write(f"Nhãn theo ngưỡng đã khóa: **{r['label']}** (kết quả nghiên cứu, không phải chẩn đoán)")
-            st.table({'Lớp': ['benign', 'malignant'], 'Xác suất đã hiệu chuẩn (%)': [round(float(p) * 100, 2) for p in r['p_cal']],
-                      'Xác suất thô (%)': [round(float(p) * 100, 2) for p in r['p_raw']]})
-        with c2:
-            st.subheader('Vùng nghi ngờ do mô hình phân vùng')
-            st.write(f"Tỉ lệ diện tích mask: {r['mask'].mean() * 100:.2f}% | số vùng (bounding box): {len(r['boxes'])}")
-            st.write(r['boxes'])
-        panels = [('Ảnh đã tiền xử lý', r['image']), ('Mask dự đoán', core.overlay_mask(r['image'], r['mask'])),
-                  (f"Bounding box ({len(r['boxes'])})", core.draw_boxes(r['image'], r['boxes'])), ('Grad-CAM', core.overlay_cam(r['image'], r['cam']))]
-        if r['evidence'] is not None:
-            ev = r['evidence'] / (r['evidence'].max() + 1e-12)
-            panels.append(('Evidence map (nối trực tiếp vào logit)', core.overlay_cam(r['image'], ev)))
-        fig, ax = plt.subplots(1, len(panels), figsize=(4 * len(panels), 4.2))
-        for a, (t, im) in zip(np.atleast_1d(ax), panels):
-            a.imshow(im); a.set_title(t, fontsize=9); a.axis('off')
-        st.pyplot(fig)
-        st.caption('Grad-CAM và evidence map là giải thích về cách mô hình tính điểm, chưa phải bằng chứng y khoa. Độ trung thực (faithfulness) của chúng chỉ được xác nhận bằng các thử nghiệm trong báo cáo nghiên cứu.')
-        st.caption('Giới hạn: huấn luyện trên một bộ dữ liệu công khai, chưa kiểm định lâm sàng; ngưỡng từ chối chỉ là công cụ hỗ trợ.')
+            from src import visualization as V
+            panels = V.analysis_panels(res, 0.45)
+            for col, (t, im) in zip(st.columns(min(4, len(panels))), panels[:4]):
+                col.image(im, caption=t, **ui.STRETCH)
+            st.write(f'**Dự đoán mô hình: {config.CLASS_VI[res.label]}** · P(malignant) hiệu chuẩn {res.p_malignant:.3f} · '
+                     f'{"mô hình từ chối dự đoán tin cậy" if res.abstain else "không bị từ chối"}')
+            ui.disclaimer()
+    with t3:
+        x6_vs_v3()
+    with t4:
+        st.markdown('- Chỉ phục vụ nghiên cứu; chưa kiểm định lâm sàng.\n- Domain shift tồn tại (BUSI chỉ là dữ liệu ngoài theo protocol hiện có).\n'
+                    '- Calibration/abstention không bảo đảm đúng; Grad-CAM/evidence không phải bản đồ bệnh lý.\n- CI chứa 0 nghĩa là chưa đủ bằng chứng về khác biệt.\n'
+                    '- Chi tiết: trang *About Limits*.')
+    st.stop()
 
-elif page == 'Kết quả nghiên cứu':
-    st.title('Kết quả thực nghiệm đã lưu')
-    cfg = load_cfg()
-    if cfg is not None and cfg.get('run_mode') != 'full_experiment':
-        st.error('Các tệp kết quả hiện có đến từ SMOKE TEST (dữ liệu tổng hợp): chỉ kiểm tra mã, không có giá trị kết luận.')
-    st.caption('Chỉ hiển thị các tệp do notebook tạo ra; không có số liệu nhập tay.')
-    shown = False
-    if os.path.isdir(RES):
-        for fn in sorted(os.listdir(RES)):
-            p = os.path.join(RES, fn)
-            if fn.endswith('.csv'):
-                st.subheader(fn); st.dataframe(pd.read_csv(p)); shown = True
-            elif fn.endswith('.png'):
-                st.image(p, caption=fn); shown = True
-    if not shown:
-        st.warning('Chưa có tệp kết quả trong thư mục results/.')
-
+st.subheader('Tổng quan')
+st.write('Web demo này chạy **suy luận thật** từ checkpoint V3_full đã đóng băng, tái sử dụng mã tiền xử lý/suy luận gốc của notebook. '
+         'Kết quả là **dự đoán của mô hình** để minh họa nghiên cứu; **cần chuyên gia đánh giá**.')
+flow()
+st.subheader('Kiểm tra artifact khi khởi động')
+ui.show_health(rt)
+if not rt.ok:
+    ui.card('err', 'Chức năng phân tích bị khóa', rt.error.message_vi if rt.error else 'Kiểm tra toàn vẹn thất bại.')
+    if rt.error:
+        with st.expander('Chi tiết kỹ thuật'):
+            st.code(f'component: {rt.error.component}\n{rt.error.technical or "(không có)"}')
 else:
-    st.title('Hướng dẫn và giới hạn')
-    st.markdown("""
-**Cài đặt:** `pip install -r requirements.txt` rồi `streamlit run app.py`.
-
-**Kiến trúc:** encoder EfficientNet-B3 chung → decoder phân vùng → gộp đặc trưng 3 vùng (toàn ảnh, tổn thương, quanh tổn thương) bằng *mask dự đoán* →
-evidence map nối trực tiếp vào logit → hiệu chuẩn nhiệt độ và từ chối dự đoán chọn trên validation.
-
-**Giới hạn:**
-- Không dùng mask ground-truth khi suy luận; mask hiển thị là do mô hình dự đoán.
-- Ứng dụng không lưu ảnh và không ghi thông tin định danh.
-- Mô hình chưa được kiểm định lâm sàng; mọi kết quả cần chuyên gia đánh giá.
-- Từ chối dự đoán không đảm bảo các dự đoán còn lại là đúng.
-""")
+    ui.card('info', 'Sẵn sàng', 'Mở trang <b>Analyze</b> ở thanh bên để tải ảnh. Ảnh chỉ xử lý trong RAM, không lưu.')
+    with st.expander('Tham số đã khóa (đọc từ deploy_config.json)'):
+        c = rt.cfg
+        st.json({k: c[k] for k in ('experiment', 'seed', 'img_size', 'temperature', 'threshold', 'abstain_threshold', 'seg_threshold', 'min_area', 'tta', 'run_mode', 'pretrained_loaded')})
+    st.caption('Public deployment: không tải dữ liệu có thông tin nhận dạng cá nhân.')
