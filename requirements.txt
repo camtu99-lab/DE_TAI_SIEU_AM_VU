@@ -1,9 +1,11 @@
-streamlit
-google-genai
-rdkit
+streamlit>=1.50
+numpy
+pandas
+matplotlib
+opencv-python-headless
 pillow
-python-pptx
-gspread
-google-auth
-mammoth
-pypdf
+# Chỉ cần khi chạy mô hình thật (có deploy_config.json + checkpoint):
+torch
+torchvision
+scikit-learn
+scipy
