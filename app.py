@@ -19,7 +19,7 @@ except Exception:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 RES = os.path.join(HERE, "results")
-NAV = ["🏠  Trang chủ", "📊  Phân tích tổn thương", "🛡  Kiểm chứng bằng chứng (BUS-VERIFY)",
+NAV = ["🏠  Trang chủ", "📊  Phân tích tổn thương", "🛡  Kiểm chứng (BUS-VERIFY)",
        "📈  Kết quả thực nghiệm", "📖  Thông tin phương pháp", "ⓘ  Hướng dẫn sử dụng"]
 
 st.set_page_config(page_title="BreastVision-XAI V3", page_icon="🩺", layout="wide")
@@ -44,11 +44,20 @@ header[data-testid="stHeader"]{display:none}
   display:flex;gap:8px;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.2)}
 /* ---- sidebar ---- */
 section[data-testid="stSidebar"]{background:linear-gradient(180deg,#0b2f78 0%,#061c4d 100%);border-right:0}
-section[data-testid="stSidebar"]>div:first-child{padding-top:96px}
+section[data-testid="stSidebar"]>div:first-child{padding-top:100px}
+section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"]{padding-top:0!important}
 section[data-testid="stSidebar"] *{color:#e8f0ff}
 section[data-testid="stSidebar"] div[role="radiogroup"]{gap:6px}
-section[data-testid="stSidebar"] div[role="radiogroup"] label{padding:12px 14px;border-radius:12px;cursor:pointer;width:100%;transition:background .15s}
-section[data-testid="stSidebar"] div[role="radiogroup"] label>div:first-child{display:none}
+section[data-testid="stSidebar"] div[role="radiogroup"] label{padding:12px 16px;white-space:nowrap;border-radius:12px;cursor:pointer;width:100%;transition:background .15s}
+/* ẩn menu trang tự động của Streamlit (do thư mục pages/ cũ) */
+[data-testid="stSidebarNav"],[data-testid="stSidebarNavItems"],[data-testid="stSidebarNavSeparator"],[data-testid="stSidebarHeader"]{display:none!important}
+/* ẩn ô tròn radio: mọi khối con của nhãn không chứa chữ, và input gốc */
+section[data-testid="stSidebar"] div[role="radiogroup"] label>div:not(:has(p)){display:none!important}
+section[data-testid="stSidebar"] div[role="radiogroup"] label>div:first-of-type:not(:has(p)){display:none!important}
+section[data-testid="stSidebar"] div[role="radiogroup"] label>input{display:none!important}
+section[data-testid="stSidebar"] div[role="radiogroup"] label>div:has(p){margin-left:0!important}
+section[data-testid="stSidebar"] .stRadio{margin-top:6px}
+section[data-testid="stSidebar"] .stRadio>label{display:none}
 section[data-testid="stSidebar"] div[role="radiogroup"] label p{font-size:1.02rem;font-weight:500;margin:0}
 section[data-testid="stSidebar"] div[role="radiogroup"] label:hover{background:rgba(255,255,255,.08)}
 section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked){background:var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.25)}
@@ -221,35 +230,78 @@ def region_mass(xai, mask):
     return [(float((e * z).sum()), float(z.mean())) for z in (m, ring, bg)]
 
 
-# ============================================================ Biểu đồ minh họa ============================================================
+# ============================================================ Biểu đồ từ SỐ LIỆU THẬT (results/) ============================================================
 def _style(ax):
-    for s in ("top", "right"):
-        ax.spines[s].set_visible(False)
-    ax.tick_params(labelsize=7, length=0)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    ax.tick_params(labelsize=8, length=0)
 
 
-def fig_roc():
-    fig, ax = plt.subplots(figsize=(3.6, 2.5))
-    x = np.linspace(0, 1, 100)
-    ax.plot(x, 1 - (1 - x) ** 5, color="#0b5bd3", lw=2.2)
+def load_test_predictions():
+    """Đọc primary_test_predictions.csv + primary_test_meta.json do notebook xuất ra; None nếu chưa có."""
+    import pandas as pd
+    p, m = os.path.join(RES, "primary_test_predictions.csv"), os.path.join(RES, "primary_test_meta.json")
+    if not (os.path.exists(p) and os.path.exists(m)):
+        return None
+    d = pd.read_csv(p).dropna()
+    meta = json.load(open(m, encoding="utf-8"))
+    return d["y_true"].astype(int).values, d["p_malignant"].astype(float).values, meta
+
+
+def roc_points(y, s):
+    o = np.argsort(-s, kind="stable")
+    y = y[o]
+    tpr = np.concatenate([[0], np.cumsum(y) / max(y.sum(), 1)])
+    fpr = np.concatenate([[0], np.cumsum(1 - y) / max((1 - y).sum(), 1)])
+    return fpr, tpr, float(np.sum((fpr[1:] - fpr[:-1]) * (tpr[1:] + tpr[:-1]) / 2))
+
+
+def fig_roc(y, s, thr):
+    fpr, tpr, auc = roc_points(y, s)
+    fig, ax = plt.subplots(figsize=(3.8, 2.8))
+    ax.plot(fpr, tpr, color="#0b5bd3", lw=2.2)
     ax.plot([0, 1], [0, 1], "--", color="#9aa6bd", lw=1)
-    ax.set_xticks([]); ax.set_yticks([]); _style(ax)
-    ax.set_xlabel("FPR", fontsize=7); ax.set_ylabel("TPR", fontsize=7); fig.tight_layout()
-    return fig
+    pred = s >= thr
+    ax.scatter([pred[y == 0].mean()], [pred[y == 1].mean()], color="#d62828", zorder=3, s=28, label="Ngưỡng đã chọn")
+    ax.set_xlabel("FPR (1 - độ đặc hiệu)", fontsize=8); ax.set_ylabel("TPR (độ nhạy)", fontsize=8)
+    ax.legend(fontsize=7, frameon=False, loc="lower right"); _style(ax); fig.tight_layout()
+    return fig, auc
 
 
-def fig_cm():
-    fig, ax = plt.subplots(figsize=(3.6, 2.5))
-    ax.imshow(np.array([[0.9, 0.2], [0.15, 0.85]]), cmap="Blues", vmin=0, vmax=1)
+def fig_cm(y, s, thr):
+    pred = (s >= thr).astype(int)
+    cm = np.array([[((y == i) & (pred == j)).sum() for j in (0, 1)] for i in (0, 1)])
+    norm = cm / np.maximum(cm.sum(1, keepdims=True), 1)
+    fig, ax = plt.subplots(figsize=(3.8, 2.8))
+    ax.imshow(norm, cmap="Blues", vmin=0, vmax=1)
+    for i in range(2):
+        for j in range(2):
+            ax.text(j, i, f"{cm[i, j]}\n({norm[i, j] * 100:.1f}%)", ha="center", va="center", fontsize=9,
+                    color="white" if norm[i, j] > 0.55 else "#0c2461")
     ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
-    ax.set_xticklabels(["Lành", "Ác"], fontsize=7); ax.set_yticklabels(["Lành", "Ác"], fontsize=7); _style(ax); fig.tight_layout()
-    return fig
+    ax.set_xticklabels(["Lành", "Ác"], fontsize=8); ax.set_yticklabels(["Lành", "Ác"], fontsize=8)
+    ax.set_xlabel("Dự đoán", fontsize=8); ax.set_ylabel("Thực tế", fontsize=8); _style(ax); fig.tight_layout()
+    return fig, cm
 
 
-def fig_bars():
-    fig, ax = plt.subplots(figsize=(3.6, 2.5))
-    ax.barh([2, 1, 0], [0.9, 0.78, 0.7], color=["#7fb2ff", "#0b5bd3", "#9cc4ff"], height=0.55)
-    ax.set_yticks([]); ax.set_xticks([]); _style(ax); fig.tight_layout()
+def fig_models(primary=None):
+    import pandas as pd
+    p = os.path.join(RES, "internal_results_mean_sd.csv")
+    if not os.path.exists(p):
+        return None
+    d = pd.read_csv(p)
+    if "auroc_mean" not in d:
+        return None
+    d = d.dropna(subset=["auroc_mean"]).sort_values("auroc_mean")
+    sd = d["auroc_sd"].fillna(0).values if "auroc_sd" in d else np.zeros(len(d))
+    cols = ["#0b5bd3" if m == primary else "#9cc4ff" for m in d["model"]]
+    fig, ax = plt.subplots(figsize=(3.8, max(2.8, 0.34 * len(d) + 0.8)))
+    ax.barh(d["model"], d["auroc_mean"], xerr=sd, color=cols, height=0.62, error_kw=dict(lw=1, capsize=2, ecolor="#51607f"))
+    for i, v in enumerate(d["auroc_mean"]):
+        ax.text(v + 0.003, i, f"{v:.3f}", va="center", fontsize=7, color="#0c2461")
+    lo = max(0.0, float(d["auroc_mean"].min()) - 0.08)
+    ax.set_xlim(lo, min(1.0, float(d["auroc_mean"].max()) + 0.06))
+    ax.set_xlabel("AUROC (tập test BUS-BRA)", fontsize=8); _style(ax); fig.tight_layout()
     return fig
 
 
@@ -361,14 +413,42 @@ def page_analyze():
             else:
                 st.markdown(verify_html(r), unsafe_allow_html=True)
     with st.container(border=True):
-        st.markdown('<div class="bv-card-title">📊 Biểu đồ minh họa kết quả</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bv-card-title">📊 Biểu đồ kết quả thực nghiệm</div>', unsafe_allow_html=True)
+        tp = load_test_predictions()
+        dcfg = {}
+        try:
+            dcfg = json.load(open(os.path.join(HERE, "deploy_config.json"), encoding="utf-8"))
+        except Exception:
+            pass
+        if dcfg and dcfg.get("run_mode") != "full_experiment":
+            st.error("Số liệu trong results/ đến từ SMOKE TEST (dữ liệu tổng hợp): không có giá trị khoa học.")
         cc = st.columns(3, gap="large")
-        for c, t, f in zip(cc, ["Đường cong ROC (minh họa)", "Ma trận nhầm lẫn (minh họa)", "So sánh mô hình (minh họa)"], [fig_roc, fig_cm, fig_bars]):
-            with c:
-                st.markdown(f'<div style="text-align:center;color:#0c2461;font-weight:500">{t}</div>', unsafe_allow_html=True)
-                st.pyplot(f(), clear_figure=True)
-        st.markdown('<div class="bv-note">Các biểu đồ trên chỉ là hình minh họa bố cục, không chứa số liệu thật. Số liệu thật xem ở mục “Kết quả thực nghiệm”.</div>',
-                    unsafe_allow_html=True)
+        head = lambda t: f'<div style="text-align:center;color:#0c2461;font-weight:600;margin-bottom:4px">{t}</div>'
+        if tp is None:
+            for c, t in zip(cc[:2], ["Đường cong ROC", "Ma trận nhầm lẫn"]):
+                with c:
+                    st.markdown(head(t), unsafe_allow_html=True)
+                    st.info("Chưa có primary_test_predictions.csv trong results/. Chạy cell xuất dự đoán trong notebook (xem hướng dẫn).")
+        else:
+            y, sc, meta = tp
+            fr, auc = fig_roc(y, sc, meta["threshold"])
+            fc, cm = fig_cm(y, sc, meta["threshold"])
+            with cc[0]:
+                st.markdown(head(f"Đường cong ROC · AUROC = {auc:.3f}"), unsafe_allow_html=True); st.pyplot(fr, clear_figure=True)
+            with cc[1]:
+                st.markdown(head(f"Ma trận nhầm lẫn · n = {len(y)}"), unsafe_allow_html=True); st.pyplot(fc, clear_figure=True)
+        with cc[2]:
+            st.markdown(head("So sánh mô hình (AUROC)"), unsafe_allow_html=True)
+            fm = fig_models(dcfg.get("experiment") if dcfg else None)
+            if fm is None:
+                st.info("Chưa có internal_results_mean_sd.csv trong results/.")
+            else:
+                st.pyplot(fm, clear_figure=True)
+        if tp is not None:
+            m = tp[2]
+            st.markdown(f'<div class="bv-note">Mô hình chính: {m.get("model")} (seed {m.get("seed")}), tập test BUS-BRA chia theo bệnh nhân, '
+                        f'ngưỡng Youden chọn trên validation = {m["threshold"]:.3f}. Cột xanh đậm ở biểu đồ so sánh là mô hình đang triển khai; '
+                        f'thanh sai số là độ lệch chuẩn qua các seed (không có khi chỉ chạy 1 seed).</div>', unsafe_allow_html=True)
 
 
 def page_verify():
@@ -400,7 +480,7 @@ def page_results():
     if os.path.isdir(RES):
         for fn in sorted(os.listdir(RES)):
             p = os.path.join(RES, fn)
-            if fn.endswith(".csv"):
+            if fn.endswith(".csv") and fn != "primary_test_predictions.csv":
                 with st.container(border=True):
                     st.markdown(f'<div class="bv-card-title">{fn}</div>', unsafe_allow_html=True)
                     st.dataframe(pd.read_csv(p), width="stretch")
