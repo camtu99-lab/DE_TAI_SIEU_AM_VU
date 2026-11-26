@@ -1,11 +1,9 @@
-streamlit>=1.50
-numpy
-pandas
-matplotlib
-opencv-python-headless
-pillow
-# Chỉ cần khi chạy mô hình thật (có deploy_config.json + checkpoint):
+streamlit>=1.40
 torch
 torchvision
+opencv-python-headless
+matplotlib
+numpy
+pandas
 scikit-learn
 scipy
