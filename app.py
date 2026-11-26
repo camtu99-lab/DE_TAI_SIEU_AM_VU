@@ -5985,14 +5985,21 @@ st.session_state.setdefault("nav", HOME)
 st.session_state.setdefault("nav_side", HOME)
 
 
+def _nav_disp(o):
+    """Nhãn hiện trên menu thanh bên: dịch theo ngôn ngữ, thêm 🔒 nếu chưa đăng nhập (trừ Trang chủ)."""
+    return tx(o) if (o == HOME or is_logged_in()) else "🔒 " + tx(o)
+
+
 def go(to):
     st.session_state.nav = to
-    st.session_state.nav_side = to if to in NAV_OPTS else None
+    st.session_state.nav_side = _nav_disp(to) if to in NAV_OPTS else None
 
 
 def on_side():
-    if st.session_state.nav_side:
-        go(st.session_state.nav_side)
+    v = st.session_state.nav_side
+    if v:
+        back = {_nav_disp(o): o for o in NAV_OPTS}
+        go(back.get(v, v))
 
 
 def _fold(s):
@@ -7292,8 +7299,10 @@ with st.sidebar:
     st.selectbox("🌐 Ngôn ngữ · Language", i18n.LANGS, format_func=i18n.LANG_NAMES.get, key="lang", on_change=on_lang)
     _ACCT_SLOT = st.container(key="sbacct")   # điền ở cuối trang để số liệu phản ánh cả bài vừa nộp
     with st.container(key="sidenav"):
-        st.radio("Điều hướng", NAV_OPTS, index=None, key="nav_side", on_change=on_side, label_visibility="collapsed",
-                 format_func=lambda o: tx(o) if (o == HOME or is_logged_in()) else "🔒 " + tx(o))
+        _cur_nav = st.session_state.get("nav", HOME)
+        st.session_state["nav_side"] = _nav_disp(_cur_nav) if _cur_nav in NAV_OPTS else None
+        st.radio("Điều hướng", [_nav_disp(o) for o in NAV_OPTS], index=None, key="nav_side", on_change=on_side,
+                 label_visibility="collapsed", format_func=str)
     with st.container(key="aibtn"):
         st.markdown(f'<div class="aicard"><img src="{_uri(AI_FACE)}"><div><b>{tx("Trợ lý AI")}</b><span>{tx("Hỏi bất cứ điều gì về")}<br>{tx("hóa học, mình luôn ở đây!")}</span></div>'
                     '<div class="go">›</div></div>', unsafe_allow_html=True)
