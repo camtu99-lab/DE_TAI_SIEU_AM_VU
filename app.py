@@ -7313,6 +7313,7 @@ with st.sidebar:
                     '<div class="go">›</div></div>', unsafe_allow_html=True)
         st.button("Mở trợ lý AI", key="aibtn_b", on_click=go, args=(ASSIST,))
     st.markdown(f'<div class="mascot"><img src="{_uri(MASCOT_SVG)}"><div class="hw">{tx("Học hóa") if i18n.lang() != "bi" else "Học hóa"}<br>{tx("thật dễ!") if i18n.lang() != "bi" else "thật dễ!"}</div></div>', unsafe_allow_html=True)
+    st.markdown('<div style="opacity:.45;font-size:11px;color:#c9d0ff;text-align:center;padding:2px 0">build: nav-v3 · lang=' + i18n.lang() + '</div>', unsafe_allow_html=True)
 
 # Trên điện thoại: tự đóng thanh bên sau khi chọn một mục (mã chạy trong trang chính để không bị hủy khi làm mới)
 components.html("""<script>
