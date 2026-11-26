@@ -268,9 +268,8 @@ def fig_roc(y, s, thr):
     return fig, auc
 
 
-def fig_cm(y, s, thr):
-    pred = (s >= thr).astype(int)
-    cm = np.array([[((y == i) & (pred == j)).sum() for j in (0, 1)] for i in (0, 1)])
+def draw_cm(cm):
+    cm = np.asarray(cm)
     norm = cm / np.maximum(cm.sum(1, keepdims=True), 1)
     fig, ax = plt.subplots(figsize=(3.8, 2.8))
     ax.imshow(norm, cmap="Blues", vmin=0, vmax=1)
@@ -281,7 +280,47 @@ def fig_cm(y, s, thr):
     ax.set_xticks([0, 1]); ax.set_yticks([0, 1])
     ax.set_xticklabels(["Lành", "Ác"], fontsize=8); ax.set_yticklabels(["Lành", "Ác"], fontsize=8)
     ax.set_xlabel("Dự đoán", fontsize=8); ax.set_ylabel("Thực tế", fontsize=8); _style(ax); fig.tight_layout()
-    return fig, cm
+    return fig
+
+
+def fig_cm(y, s, thr):
+    pred = (s >= thr).astype(int)
+    cm = np.array([[((y == i) & (pred == j)).sum() for j in (0, 1)] for i in (0, 1)])
+    return draw_cm(cm), cm
+
+
+def deployed_metrics(cfg):
+    """Số liệu THẬT của mô hình đang triển khai trên tập test BUS-BRA, đọc từ results/ (không cần dự đoán từng ca).
+    Ma trận nhầm lẫn dựng lại từ độ nhạy/độ đặc hiệu và số ca test trong manifest; chỉ dùng khi khớp độ chính xác đã lưu."""
+    import pandas as pd
+    p, mf = os.path.join(RES, "internal_results_per_seed.csv"), os.path.join(RES, "busbra_split_manifest.csv")
+    if not (cfg and os.path.exists(p) and os.path.exists(mf)):
+        return None
+    d = pd.read_csv(p)
+    man = pd.read_csv(mf, usecols=["label", "split"])
+    t = man[man["split"] == "test"]
+    nm, nb = int((t["label"] == 1).sum()), int((t["label"] == 0).sum())
+    sub = d[d["model"] == cfg["experiment"]]
+    if sub.empty or nm == 0 or nb == 0:
+        return None
+    row = sub[sub["seed"] == cfg.get("seed")]
+    row = row.iloc[0] if len(row) else sub.iloc[0]
+    tp, tn = int(round(row["sensitivity_malignant"] * nm)), int(round(row["specificity"] * nb))
+    ok = abs((tp + tn) / (nm + nb) - row["accuracy"]) < 0.003
+    return dict(cm=np.array([[tn, nb - tn], [nm - tp, tp]]) if ok else None, row=row, pts=sub, nm=nm, nb=nb)
+
+
+def fig_op_points(dm):
+    """Điểm vận hành (1-độ đặc hiệu, độ nhạy) của từng seed của mô hình triển khai: số liệu thật, KHÔNG phải đường cong ROC."""
+    pts, row = dm["pts"], dm["row"]
+    fig, ax = plt.subplots(figsize=(3.8, 2.8))
+    ax.plot([0, 1], [0, 1], "--", color="#9aa6bd", lw=1)
+    ax.scatter(1 - pts["specificity"], pts["sensitivity_malignant"], color="#9cc4ff", s=40, label="Các seed", zorder=3)
+    ax.scatter([1 - row["specificity"]], [row["sensitivity_malignant"]], color="#d62828", s=55, label=f"Seed {int(row['seed'])} (triển khai)", zorder=4)
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.set_xlabel("1 - độ đặc hiệu", fontsize=8); ax.set_ylabel("Độ nhạy", fontsize=8)
+    ax.legend(fontsize=7, frameon=False, loc="lower right"); _style(ax); fig.tight_layout()
+    return fig
 
 
 def fig_models(primary=None):
@@ -297,10 +336,10 @@ def fig_models(primary=None):
     cols = ["#0b5bd3" if m == primary else "#9cc4ff" for m in d["model"]]
     fig, ax = plt.subplots(figsize=(3.8, max(2.8, 0.34 * len(d) + 0.8)))
     ax.barh(d["model"], d["auroc_mean"], xerr=sd, color=cols, height=0.62, error_kw=dict(lw=1, capsize=2, ecolor="#51607f"))
-    for i, v in enumerate(d["auroc_mean"]):
-        ax.text(v + 0.003, i, f"{v:.3f}", va="center", fontsize=7, color="#0c2461")
+    for i, (v, e) in enumerate(zip(d["auroc_mean"], sd)):
+        ax.text(v + e + 0.004, i, f"{v:.3f}", va="center", fontsize=7, color="#0c2461")
     lo = max(0.0, float(d["auroc_mean"].min()) - 0.08)
-    ax.set_xlim(lo, min(1.0, float(d["auroc_mean"].max()) + 0.06))
+    ax.set_xlim(lo, min(1.0, float((d["auroc_mean"] + sd).max()) + 0.06))
     ax.set_xlabel("AUROC (tập test BUS-BRA)", fontsize=8); _style(ax); fig.tight_layout()
     return fig
 
@@ -424,12 +463,8 @@ def page_analyze():
             st.error("Số liệu trong results/ đến từ SMOKE TEST (dữ liệu tổng hợp): không có giá trị khoa học.")
         cc = st.columns(3, gap="large")
         head = lambda t: f'<div style="text-align:center;color:#0c2461;font-weight:600;margin-bottom:4px">{t}</div>'
-        if tp is None:
-            for c, t in zip(cc[:2], ["Đường cong ROC", "Ma trận nhầm lẫn"]):
-                with c:
-                    st.markdown(head(t), unsafe_allow_html=True)
-                    st.info("Chưa có primary_test_predictions.csv trong results/. Chạy cell xuất dự đoán trong notebook (xem hướng dẫn).")
-        else:
+        dm = deployed_metrics(dcfg) if tp is None else None
+        if tp is not None:
             y, sc, meta = tp
             fr, auc = fig_roc(y, sc, meta["threshold"])
             fc, cm = fig_cm(y, sc, meta["threshold"])
@@ -437,8 +472,23 @@ def page_analyze():
                 st.markdown(head(f"Đường cong ROC · AUROC = {auc:.3f}"), unsafe_allow_html=True); st.pyplot(fr, clear_figure=True)
             with cc[1]:
                 st.markdown(head(f"Ma trận nhầm lẫn · n = {len(y)}"), unsafe_allow_html=True); st.pyplot(fc, clear_figure=True)
+        elif dm is not None:
+            r0 = dm["row"]
+            with cc[0]:
+                st.markdown(head(f"Điểm vận hành ROC · AUROC = {r0['auroc']:.3f}"), unsafe_allow_html=True); st.pyplot(fig_op_points(dm), clear_figure=True)
+            with cc[1]:
+                if dm["cm"] is not None:
+                    st.markdown(head(f"Ma trận nhầm lẫn · n = {dm['nm'] + dm['nb']}"), unsafe_allow_html=True); st.pyplot(draw_cm(dm["cm"]), clear_figure=True)
+                else:
+                    st.markdown(head("Ma trận nhầm lẫn"), unsafe_allow_html=True)
+                    st.info("Không dựng lại được ma trận khớp độ chính xác đã lưu; cần primary_test_predictions.csv.")
+        else:
+            for c, t in zip(cc[:2], ["Đường cong ROC", "Ma trận nhầm lẫn"]):
+                with c:
+                    st.markdown(head(t), unsafe_allow_html=True)
+                    st.info("Thiếu internal_results_per_seed.csv / busbra_split_manifest.csv trong results/ (hoặc chưa có primary_test_predictions.csv).")
         with cc[2]:
-            st.markdown(head("So sánh mô hình (AUROC)"), unsafe_allow_html=True)
+            st.markdown(head("So sánh mô hình · AUROC trung bình"), unsafe_allow_html=True)
             fm = fig_models(dcfg.get("experiment") if dcfg else None)
             if fm is None:
                 st.info("Chưa có internal_results_mean_sd.csv trong results/.")
@@ -449,6 +499,11 @@ def page_analyze():
             st.markdown(f'<div class="bv-note">Mô hình chính: {m.get("model")} (seed {m.get("seed")}), tập test BUS-BRA chia theo bệnh nhân, '
                         f'ngưỡng Youden chọn trên validation = {m["threshold"]:.3f}. Cột xanh đậm ở biểu đồ so sánh là mô hình đang triển khai; '
                         f'thanh sai số là độ lệch chuẩn qua các seed (không có khi chỉ chạy 1 seed).</div>', unsafe_allow_html=True)
+        elif dm is not None:
+            st.markdown(f'<div class="bv-note">Mô hình triển khai: {dcfg.get("experiment")} (seed {dcfg.get("seed")}); tập test BUS-BRA chia theo bệnh nhân '
+                        f'({dm["nb"]} lành, {dm["nm"]} ác). Ma trận nhầm lẫn dựng lại chính xác từ độ nhạy/độ đặc hiệu đã lưu ở ngưỡng Youden chọn trên validation. '
+                        f'Chưa có primary_test_predictions.csv nên chưa vẽ được đường ROC đầy đủ; thêm file đó (cell xuất dự đoán) để thay bằng đường cong. '
+                        f'So sánh mô hình: cột xanh đậm là mô hình triển khai, thanh sai số là độ lệch chuẩn qua các seed (không có khi chỉ 1 seed).</div>', unsafe_allow_html=True)
 
 
 def page_verify():
