@@ -1,0 +1,34 @@
+{
+  "_comment": "Cấu hình BUS-VERIFY V4. Các mục trong 'preregistered' được CỐ ĐỊNH TRƯỚC khi chạy thực nghiệm; đổi sau khi thấy kết quả là vi phạm giao thức và phải được ghi vào báo cáo.",
+  "version": "V4-BUS-VERIFY-0.1",
+  "preprocessing": {"img_size": 256, "seg_threshold": 0.5, "min_area_frac": 0.0015, "keep_components": "largest", "fill_holes": true},
+  "regions": {"ring_frac_of_radius": 0.5, "ring_px_min": 6, "ring_px_max": 20, "bg_margin_px": 4},
+  "counterfactual": {
+    "kinds": ["blur", "replace", "permute"],
+    "strengths": {"blur": [3.0, 7.0], "replace": [0.6, 1.0], "permute": [0.5, 1.0]},
+    "strength_valid_range": {"blur": [0.5, 12.0], "replace": [0.1, 1.0], "permute": [0.1, 1.0]},
+    "repeats_stochastic": 2,
+    "n_matched_translations": 2,
+    "evidence_top_q": 0.2,
+    "seed": 20260101
+  },
+  "stability": {"tta": ["hflip", "affine_small", "brightness"], "affine_max_rot_deg": 6.0, "affine_scale": [0.95, 1.05], "affine_max_trans_frac": 0.03},
+  "risk_model": {"type": "logistic_l2", "C_grid": [0.01, 0.03, 0.1, 0.3, 1.0], "oof_folds": 5, "compare_gradient_boosting": true, "calibrate": "platt"},
+  "preregistered": {
+    "base_model": "X6",
+    "base_model_rationale": "Pipeline V3 cho thấy V3_full không vượt X6/X0 có ý nghĩa thống kê (artifacts/v3_verified/paired_comparisons.csv) và có AURC nội bộ kém hơn; X6 đơn giản hơn nhưng vẫn có đầu ra phân vùng + evidence. Lựa chọn này dựa một phần trên kết quả test V3 đã được khảo sát => phải khai báo, không coi là độc lập.",
+    "seeds": [42, 43, 44],
+    "oof_folds": 5,
+    "primary_endpoints": ["error_auprc", "fn_alert_recall_at_alert_rate"],
+    "alert_rates": [0.10, 0.20, 0.30],
+    "primary_alert_rate": 0.20,
+    "high_risk_alert_rate": 0.10,
+    "n_bootstrap": 2000,
+    "alpha": 0.05,
+    "multiple_comparison": "holm",
+    "primary_comparisons": [["P1", "B1"], ["P1", "B3"], ["P1", "B4"], ["P1", "B6"]],
+    "test_labels_used_for_training_or_thresholds": false
+  },
+  "oos_gate": {"min_mask_area_quantile": 0.005, "max_mask_area_quantile": 0.995, "require_nonempty_mask": true},
+  "ui": {"max_upload_mb": 15, "store_uploads": false, "send_images_to_external_services": false}
+}

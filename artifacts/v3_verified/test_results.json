@@ -1,0 +1,158 @@
+{
+ "device": "cpu",
+ "torch": "2.11.0+cu130",
+ "n": 25,
+ "passed": 25,
+ "results": [
+  {
+   "name": "test_all_registered_experiments_forward",
+   "status": "PASS",
+   "seconds": 5.4,
+   "detail": "23 cấu hình trong registry (E0–E4, X0–X6, ablation) forward đúng kích thước"
+  },
+  {
+   "name": "test_analyze_image_v2",
+   "status": "PASS",
+   "seconds": 1.0,
+   "detail": "analyze_image_v2: xác suất hiệu chuẩn, abstention, mask, box, evidence, Grad-CAM; chỉ nhận ảnh"
+  },
+  {
+   "name": "test_augmentation_sync",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "IoU trung bình giữa vùng sáng và mask sau 100 lần augment = 0.991"
+  },
+  {
+   "name": "test_busi_binary_excludes_normal_and_cross_dataset",
+   "status": "PASS",
+   "seconds": 0.3,
+   "detail": "BUSI: loại 6 ảnh normal, không chuyển thành benign; không trùng với BUS-BRA; bản sao chèn vào bị phát hiện"
+  },
+  {
+   "name": "test_checkpoint_roundtrip_all_models",
+   "status": "PASS",
+   "seconds": 4.2,
+   "detail": "save→load cho E0,E1,E2,E3,X0,X6,A_evidence_egr cho đầu ra giống hệt"
+  },
+  {
+   "name": "test_dataset_pairing_and_audit",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "59 ảnh, 30 bệnh nhân, ghép ảnh–mask 100%"
+  },
+  {
+   "name": "test_evidence_collapse_detection",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "phát hiện đúng collapse đồng đều, collapse một điểm; không báo nhầm map tập trung"
+  },
+  {
+   "name": "test_evidence_logit_coupling",
+   "status": "PASS",
+   "seconds": 0.8,
+   "detail": "phân rã logit chính xác (sai số 1.5e-08); can thiệp ev_mask khớp dự đoán; decoupled không ảnh hưởng logit"
+  },
+  {
+   "name": "test_explanation_loss",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "đồng đều bị phạt, lý tưởng ≈ 0; mask rỗng bỏ qua; gradient hữu hạn; density(đồng đều) bất biến diện tích (0.693≈ln2)"
+  },
+  {
+   "name": "test_external_evaluation_lock",
+   "status": "PASS",
+   "seconds": 0.9,
+   "detail": "từ chối khi chưa khóa (không đọc dữ liệu); đánh giá 1 lần; khóa lại/đánh giá lại bị chặn; sửa checkpoint bị phát hiện"
+  },
+  {
+   "name": "test_fusion_modes_shapes",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "concat / weighted / gated cho đầu ra đúng kích thước"
+  },
+  {
+   "name": "test_gradcam_dict",
+   "status": "PASS",
+   "seconds": 0.3,
+   "detail": "Grad-CAM cho mô hình trả dict hoạt động"
+  },
+  {
+   "name": "test_gradient_flow",
+   "status": "PASS",
+   "seconds": 2.2,
+   "detail": "cls→evidence(ewp) có; cls→decoder không (detach); cls→evidence(decoupled) không; expl→evidence có; cons→evidence có"
+  },
+  {
+   "name": "test_inference_does_not_use_gt_mask",
+   "status": "PASS",
+   "seconds": 0.4,
+   "detail": "forward(x, ev_mask) không có tham số mask GT; đảo toàn bộ GT mask không đổi dự đoán"
+  },
+  {
+   "name": "test_inverse_warp_and_consistency",
+   "status": "PASS",
+   "seconds": 0.1,
+   "detail": "inverse-warp sai số 0.021 trên pixel hợp lệ; hflip chính xác; consistency 0.000 (đúng) vs 0.378 (sai)"
+  },
+  {
+   "name": "test_leakage_detection_and_duplicates",
+   "status": "PASS",
+   "seconds": 0.3,
+   "detail": "chia theo bệnh nhân không rò rỉ; phép thử âm bị phát hiện; trùng/gần trùng cùng nhóm; nhãn mâu thuẫn được báo"
+  },
+  {
+   "name": "test_mask_encodings_and_empty_dataset_errors",
+   "status": "PASS",
+   "seconds": 0.1,
+   "detail": "mask 0/1 không bị loại nhầm; loại hết/bảng rỗng → báo lỗi tiếng Việt rõ nguyên nhân thay vì \"argmin of an empty sequence\""
+  },
+  {
+   "name": "test_multi_region_pooling",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "masked pooling khớp tính tay; mask rỗng hữu hạn; ring ∩ lesion = ∅"
+  },
+  {
+   "name": "test_resume_midway_and_compact_marker",
+   "status": "PASS",
+   "seconds": 13.5,
+   "detail": "ngắt thật sau epoch 1 → resume chạy tiếp epoch 2–3; xong thì checkpoint cuối gọn (<1MB); chạy lại không huấn luyện thêm"
+  },
+  {
+   "name": "test_segmentation_output_and_metrics",
+   "status": "PASS",
+   "seconds": 0.3,
+   "detail": "seg (B,1,H,W) hữu hạn; Dice(GT,GT)=1; HD95(GT,GT)=0"
+  },
+  {
+   "name": "test_training_smoke_and_resume",
+   "status": "PASS",
+   "seconds": 14.5,
+   "detail": "X6 (constraint + consistency) huấn luyện 2 epoch: loss hữu hạn, đủ các thành phần loss, checkpoint + resume hoạt động"
+  },
+  {
+   "name": "test_v3_counterfactual_faithfulness_and_ema_tta",
+   "status": "PASS",
+   "seconds": 0.8,
+   "detail": "faithfulness + edge loss có gradient; EMA và 2-view TTA hoạt động chuẩn"
+  },
+  {
+   "name": "test_v3_evidence_coupling_all_and_decomposition",
+   "status": "PASS",
+   "seconds": 0.4,
+   "detail": "phân rã cộng toàn bộ 4 vùng V3 chính xác (sai số 3.7e-09); sửa cờ pretrained_loaded E0"
+  },
+  {
+   "name": "test_v3_posterior_zone_and_boundary_loss",
+   "status": "PASS",
+   "seconds": 0.0,
+   "detail": "posterior_zone chỉ nằm dưới khối u và rời rạc với u; boundary_loss hữu hạn và có gradient"
+  },
+  {
+   "name": "test_evaluation_functions_run",
+   "status": "PASS",
+   "seconds": 3.8,
+   "detail": "phân loại, định vị, faithfulness, can thiệp evidence, nhiễu nền, nhất quán, hiệu chuẩn, chọn lọc, phân vùng, thống kê đều chạy"
+  }
+ ]
+}

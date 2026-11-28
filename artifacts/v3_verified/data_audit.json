@@ -1,0 +1,53 @@
+{
+ "busbra": {
+  "n": 1875,
+  "n_bad_image": 0,
+  "n_bad_or_missing_mask": 0,
+  "n_empty_mask": 0,
+  "n_mask_size_mismatch": 0,
+  "n_exact_duplicate_images": 0,
+  "n_neardup_groups": 0,
+  "n_images_in_neardup_groups": 0,
+  "n_label_conflict_groups": 0,
+  "class_counts": {
+   "0": 1268,
+   "1": 607
+  },
+  "n_patients": 1064
+ },
+ "busbra_dropped": {
+  "dropped_invalid": 0,
+  "dropped_label_conflict": 0,
+  "dropped_exact_dups": 0
+ },
+ "busi": {
+  "n": 647,
+  "n_bad_image": 0,
+  "n_bad_or_missing_mask": 0,
+  "n_empty_mask": 0,
+  "n_mask_size_mismatch": 0,
+  "n_exact_duplicate_images": 2,
+  "n_neardup_groups": 12,
+  "n_images_in_neardup_groups": 26,
+  "n_label_conflict_groups": 1,
+  "class_counts": {
+   "0": 437,
+   "1": 210
+  },
+  "n_patients": 647
+ },
+ "busi_dropped": {
+  "dropped_invalid": 0,
+  "dropped_label_conflict": 2,
+  "dropped_exact_dups": 0
+ },
+ "busi_info": {
+  "n_normal_excluded": 133
+ },
+ "busi_duplicates_with_busbra_removed": 0,
+ "cross_after": {
+  "sha256_shared": 0,
+  "neardup_pairs": 0,
+  "ok": true
+ }
+}

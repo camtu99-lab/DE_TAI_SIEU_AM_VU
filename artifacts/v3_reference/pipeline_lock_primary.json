@@ -1,0 +1,71 @@
+{
+ "created": "2026-11-23 16:36:42",
+ "ckpt": "V3_full_s44_best.pt",
+ "ckpt_sha256": "f586d7649e86c1146c64c4a579a8fb0f9a719feb06e84e9df1e0231d12c31dfe",
+ "config": {
+  "experiment": "V3_full",
+  "seed": 44,
+  "img_size": 256,
+  "seg_threshold": 0.5,
+  "min_area": 98,
+  "run_mode": "full_experiment",
+  "selection": "checkpoint/seed ch\u1ecdn theo validation BUS-BRA"
+ },
+ "config_sha256": "c121751cc11562fb8f8bc7d036c4126da2b459c8341b3285b61f5c536b3ce02c",
+ "temperature": 1.259194134200016,
+ "threshold": 0.17555833710788551,
+ "abstain_threshold": 0.6931583152688364,
+ "notes": "kh\u00f3a tr\u01b0\u1edbc khi \u0111\u1ecdc BUSI",
+ "external_evaluated": true,
+ "external_summary": {
+  "n": 645,
+  "n_malignant": 209,
+  "auroc": 0.8806900487248145,
+  "auprc": 0.8377632282248267,
+  "sensitivity_malignant": 0.8947368421052632,
+  "specificity": 0.5871559633027523,
+  "balanced_accuracy": 0.7409464027040078,
+  "f1": 0.6493055555555556,
+  "accuracy": 0.6868217054263566,
+  "threshold": 0.17555833710788551,
+  "auroc_ci95": [
+   0.8455383694518066,
+   0.9084887509726801
+  ],
+  "calibration_locked_T": {
+   "NLL": 0.45118728861944396,
+   "Brier": 0.277935558541351,
+   "ECE": 0.03703371985369527
+  },
+  "selective": {
+   "coverage": 0.8635658914728682,
+   "selective_risk": 0.14721723518850988,
+   "sensitivity_malignant_accepted": 0.8429319371727748,
+   "malignant_abstained": 0.0861244019138756,
+   "aurc": 0.10739374827127823
+  },
+  "segmentation": {
+   "dice": 0.68650533967223,
+   "iou": 0.5924065162657679,
+   "hd95": 43.477136416350085,
+   "n_hd95_undefined": 1
+  },
+  "localisation_evidence": {
+   "n": 645,
+   "relevance_mass_lesion": 0.4487239337620116,
+   "relevance_mass_lesion_context": 0.5928771760011482,
+   "pointing_game": 0.8604651162790697,
+   "area_adjusted_lesion": 0.4199125052627193,
+   "area_adjusted_lesion_context": 0.5571378838852417
+  },
+  "collapse": {
+   "n": 645,
+   "mean_norm_entropy": 0.7582311630249023,
+   "mean_ess_fraction": 0.15078921616077423,
+   "uniform_collapse_rate": 0.0,
+   "peaked_collapse_rate": 0.0,
+   "collapse_flag": false
+  }
+ },
+ "evaluated_at": "2026-11-23 16:38:14"
+}

@@ -1,13 +1,23 @@
-# BreastVision-XAI V3 - Streamlit demo
+# BreastVision-XAI V4 — BUS-VERIFY
+**Counterfactual Evidence Verification and Failure-Risk Detection for Breast Ultrasound AI.**
+Công cụ NGHIÊN CỨU/GIÁO DỤC — KHÔNG phải thiết bị chẩn đoán y khoa.
 
-    pip install -r requirements.txt
-    streamlit run app.py
+## Trạng thái trung thực (đọc trước)
+| Hạng mục | Trạng thái |
+|---|---|
+| Mã nguồn `src/`, app Streamlit 8 trang, 120+ kiểm thử logic | Có; 111 pass + 1 skip (cần torch) trong môi trường không có torch |
+| Notebook Kaggle `notebooks/BreastVision_XAI_V4_BUS_VERIFY_Kaggle.ipynb` | Sinh tự động, kiểm cú pháp. **NOT RUN** (chưa chạy GPU/dữ liệu thật) |
+| Checkpoint V4, risk model, chính sách khóa, kết quả thực nghiệm V4 | **KHÔNG CÓ** — chưa huấn luyện; app hiển thị NOT RUN, không giả lập |
+| Kết quả V3 (tham chiếu, đã chạy thật) | `artifacts/v3_reference/`, `artifacts/v3_verified/` |
+| Chạy app Streamlit thật, parity notebook↔web với torch | **NOT RUN** (không có streamlit/torch ở nơi phát triển); có test logic bằng stub |
 
-## Hai chế độ
-- **DEMO** (mặc định khi chưa có checkpoint): chỉ cần numpy/opencv/matplotlib. Vùng viền xanh tách bằng ngưỡng Otsu,
-  bản đồ nhiệt chỉ là làm mờ mask -> KHÔNG phải kết quả mô hình. Dùng để xem giao diện (ảnh mẫu `bus_sample.png` là ảnh tổng hợp).
-- **MÔ HÌNH**: chạy mục 27 của `BreastVision_XAI_V3.ipynb`, chép vào cùng thư mục với `app.py`:
-  `deploy_config.json`, file checkpoint (.pt) được ghi trong config, và thư mục `results/` (tuỳ chọn).
-  App tự chuyển chế độ và gọi `analyze_image_v2` (hiệu chuẩn T, ngưỡng khóa, từ chối dự đoán, evidence map/Grad-CAM).
+## Cấu trúc
+`src/` lõi (pipeline, counterfactual_verifier, failure_risk, benchmark, robustness, …) · `src/v3/` module V3 giữ nguyên (sha256 trong SHA256SUMS.txt) · `app.py` + `pages/` · `configs/bus_verify.json` (cố định trước) · `notebooks/` · `tests/` · `reports/` · `docs/` · `artifacts/`.
 
-Các file `bus_core.py, bus_core_v2.py, models_xai.py, ...` là module xuất từ notebook, cần nằm cạnh `app.py`.
+## Chạy
+- Huấn luyện + thực nghiệm: `docs/KAGGLE_GUIDE.md`. Demo CPU: `docs/WINDOWS_CPU_GUIDE.md`.
+- `python -m pytest -q tests` · `streamlit run app.py`.
+- Dựng lại notebook sau khi sửa `src/`: `python notebooks/build_notebook.py` (test `test_notebook_sync` bảo đảm notebook = mã nguồn).
+
+## Quyền riêng tư
+Không lưu ảnh tải lên, không gọi dịch vụ ngoài. Mọi xử lý trong bộ nhớ.

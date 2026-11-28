@@ -1,0 +1,136 @@
+{
+ "X0": {
+  "n": 645,
+  "n_malignant": 209,
+  "auroc": 0.8661933189938984,
+  "auprc": 0.8056354063066579,
+  "sensitivity_malignant": 0.8564593301435407,
+  "specificity": 0.6146788990825688,
+  "balanced_accuracy": 0.7355691146130547,
+  "f1": 0.6438848920863309,
+  "accuracy": 0.6930232558139535,
+  "threshold": 0.2137647672477819,
+  "auroc_ci95": [
+   0.8331701482584862,
+   0.8955779534035837
+  ],
+  "calibration_locked_T": {
+   "NLL": 0.43322396244896183,
+   "Brier": 0.2721405264552923,
+   "ECE": 0.03065298895174961
+  },
+  "selective": {
+   "coverage": 0.8914728682170543,
+   "selective_risk": 0.15130434782608695,
+   "sensitivity_malignant_accepted": 0.7864583333333334,
+   "malignant_abstained": 0.08133971291866028,
+   "aurc": 0.08680395110702738
+  },
+  "segmentation": {
+   "dice": 0.6466036262333281,
+   "iou": 0.5434212781058688,
+   "hd95": 51.77979462281401,
+   "n_hd95_undefined": 1
+  }
+ },
+ "X6": {
+  "n": 645,
+  "n_malignant": 209,
+  "auroc": 0.8863965585356218,
+  "auprc": 0.8167685032277375,
+  "sensitivity_malignant": 0.8133971291866029,
+  "specificity": 0.7821100917431193,
+  "balanced_accuracy": 0.797753610464861,
+  "f1": 0.7172995780590717,
+  "accuracy": 0.7922480620155039,
+  "threshold": 0.3188960582508918,
+  "auroc_ci95": [
+   0.8560890934623187,
+   0.9113439352036963
+  ],
+  "calibration_locked_T": {
+   "NLL": 0.40631158282460256,
+   "Brier": 0.25642873501905455,
+   "ECE": 0.04348076742655995
+  },
+  "selective": {
+   "coverage": 0.9038759689922481,
+   "selective_risk": 0.14922813036020582,
+   "sensitivity_malignant_accepted": 0.7647058823529411,
+   "malignant_abstained": 0.10526315789473684,
+   "aurc": 0.07024248235725565
+  },
+  "segmentation": {
+   "dice": 0.6676629897603151,
+   "iou": 0.5704312957273222,
+   "hd95": 37.59373768706912,
+   "n_hd95_undefined": 11
+  },
+  "localisation_evidence": {
+   "n": 645,
+   "relevance_mass_lesion": 0.4211806616522083,
+   "relevance_mass_lesion_context": 0.5740454758957837,
+   "pointing_game": 0.8775193798449612,
+   "area_adjusted_lesion": 0.3891303323560781,
+   "area_adjusted_lesion_context": 0.5351795667092929
+  },
+  "collapse": {
+   "n": 645,
+   "mean_norm_entropy": 0.7840139269828796,
+   "mean_ess_fraction": 0.1772761046886444,
+   "uniform_collapse_rate": 0.0,
+   "peaked_collapse_rate": 0.0,
+   "collapse_flag": false
+  }
+ },
+ "V3_full": {
+  "n": 645,
+  "n_malignant": 209,
+  "auroc": 0.8806900487248145,
+  "auprc": 0.8377632282248267,
+  "sensitivity_malignant": 0.8947368421052632,
+  "specificity": 0.5871559633027523,
+  "balanced_accuracy": 0.7409464027040078,
+  "f1": 0.6493055555555556,
+  "accuracy": 0.6868217054263566,
+  "threshold": 0.17555833710788551,
+  "auroc_ci95": [
+   0.8455383694518066,
+   0.9084887509726801
+  ],
+  "calibration_locked_T": {
+   "NLL": 0.45118728861944396,
+   "Brier": 0.277935558541351,
+   "ECE": 0.03703371985369527
+  },
+  "selective": {
+   "coverage": 0.8635658914728682,
+   "selective_risk": 0.14721723518850988,
+   "sensitivity_malignant_accepted": 0.8429319371727748,
+   "malignant_abstained": 0.0861244019138756,
+   "aurc": 0.10739374827127823
+  },
+  "segmentation": {
+   "dice": 0.68650533967223,
+   "iou": 0.5924065162657679,
+   "hd95": 43.477136416350085,
+   "n_hd95_undefined": 1
+  },
+  "localisation_evidence": {
+   "n": 645,
+   "relevance_mass_lesion": 0.4487239337620116,
+   "relevance_mass_lesion_context": 0.5928771760011482,
+   "pointing_game": 0.8604651162790697,
+   "area_adjusted_lesion": 0.4199125052627193,
+   "area_adjusted_lesion_context": 0.5571378838852417
+  },
+  "collapse": {
+   "n": 645,
+   "mean_norm_entropy": 0.7582311630249023,
+   "mean_ess_fraction": 0.15078921616077423,
+   "uniform_collapse_rate": 0.0,
+   "peaked_collapse_rate": 0.0,
+   "collapse_flag": false
+  }
+ }
+}
