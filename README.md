@@ -1,23 +1,44 @@
-# BreastVision-XAI V4 — BUS-VERIFY
-**Counterfactual Evidence Verification and Failure-Risk Detection for Breast Ultrasound AI.**
-Công cụ NGHIÊN CỨU/GIÁO DỤC — KHÔNG phải thiết bị chẩn đoán y khoa.
+# BreastVision-XAI V3: web demo Streamlit
 
-## Trạng thái trung thực (đọc trước)
-| Hạng mục | Trạng thái |
-|---|---|
-| Mã nguồn `src/`, app Streamlit 8 trang, 120+ kiểm thử logic | Có; 111 pass + 1 skip (cần torch) trong môi trường không có torch |
-| Notebook Kaggle `notebooks/BreastVision_XAI_V4_BUS_VERIFY_Kaggle.ipynb` | Sinh tự động, kiểm cú pháp. **NOT RUN** (chưa chạy GPU/dữ liệu thật) |
-| Checkpoint V4, risk model, chính sách khóa, kết quả thực nghiệm V4 | **KHÔNG CÓ** — chưa huấn luyện; app hiển thị NOT RUN, không giả lập |
-| Kết quả V3 (tham chiếu, đã chạy thật) | `artifacts/v3_reference/`, `artifacts/v3_verified/` |
-| Chạy app Streamlit thật, parity notebook↔web với torch | **NOT RUN** (không có streamlit/torch ở nơi phát triển); có test logic bằng stub |
+Công cụ hỗ trợ NGHIÊN CỨU, không phải thiết bị chẩn đoán y tế.
 
-## Cấu trúc
-`src/` lõi (pipeline, counterfactual_verifier, failure_risk, benchmark, robustness, …) · `src/v3/` module V3 giữ nguyên (sha256 trong SHA256SUMS.txt) · `app.py` + `pages/` · `configs/bus_verify.json` (cố định trước) · `notebooks/` · `tests/` · `reports/` · `docs/` · `artifacts/`.
+## Cần chuẩn bị (từ notebook)
+Chạy `BreastVision_XAI_V3.ipynb` đến **mục 27** (Streamlit export). Notebook tạo thư mục `deploy_xai/` gồm:
+- `V3_full_s42_best.pt` (checkpoint; tên có thể khác theo seed) 
+- `deploy_config.json` (temperature, ngưỡng phân loại, ngưỡng từ chối đã khóa)
+- `results/` (CSV, PNG, báo cáo)
+
+Chép **3 thứ trên** vào thư mục này (cạnh `app.py`), giữ nguyên tên file:
+
+```
+BreastVision_XAI_V3_streamlit_demo/
+├── app.py                  <- bản mới (thay cho app.py của notebook)
+├── bus_core.py, bus_core_v2.py, bus_trust.py, data_audit.py,
+│   evaluation_xai.py, losses_xai.py, models_xai.py   <- giống hệt notebook
+├── deploy_config.json      <- từ deploy_xai/
+├── V3_full_s42_best.pt     <- từ deploy_xai/ (đúng tên trong deploy_config.json)
+├── results/                <- từ deploy_xai/results/ (tùy chọn)
+├── samples/                <- ảnh mẫu (tùy chọn, ảnh được phép dùng và không có định danh)
+└── requirements.txt
+```
+
+Hoặc để nguyên thư mục `deploy_xai/` ở đâu đó rồi đặt biến môi trường `BV_MODEL_DIR=/duong/dan/deploy_xai`.
 
 ## Chạy
-- Huấn luyện + thực nghiệm: `docs/KAGGLE_GUIDE.md`. Demo CPU: `docs/WINDOWS_CPU_GUIDE.md`.
-- `python -m pytest -q tests` · `streamlit run app.py`.
-- Dựng lại notebook sau khi sửa `src/`: `python notebooks/build_notebook.py` (test `test_notebook_sync` bảo đảm notebook = mã nguồn).
+```
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-## Quyền riêng tư
-Không lưu ảnh tải lên, không gọi dịch vụ ngoài. Mọi xử lý trong bộ nhớ.
+## Tính năng
+- Nhãn benign/malignant theo ngưỡng đã khóa, xác suất đã hiệu chuẩn, **từ chối dự đoán** khi độ tin cậy thấp.
+- Mask, bounding box, Grad-CAM, evidence map, vùng quanh tổn thương, vùng hậu âm BI-RADS.
+- **Phân rã đóng góp theo vùng** vào logit (tổng khớp chính xác với logit của mô hình).
+- Kiểm tra độ tin cậy giải thích: evidence collapse, tỉ lệ evidence/Grad-CAM nằm trong mask, ổn định khi lật ảnh.
+- Cảnh báo ảnh quá nhỏ hoặc nhiều màu (ngoài miền B-mode); banner đỏ nếu checkpoint là smoke test.
+- Tải hình tổng hợp PNG và báo cáo JSON (không chứa ảnh). Ảnh chỉ xử lý trong bộ nhớ, không lưu.
+
+## Triển khai online
+- Streamlit Community Cloud: đẩy repo lên GitHub (file > 100 MB cần Git LFS), `requirements.txt` đã trỏ tới torch CPU.
+- Hugging Face Spaces (SDK Streamlit) phù hợp hơn nếu checkpoint lớn.
+- Không đưa ảnh bệnh nhân thật lên dịch vụ công cộng.
